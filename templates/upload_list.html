@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Provider Verification Batch{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1>Provider Verification Batch</h1>
+            <p class="dashboard-subtitle">
+                Click a row to view provider verification results
+            </p>
+        </div>
+    </div>
+    
+    <!-- Upload List Table -->
+    <div class="table-container">
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>S/N</th>
+                    <th>File Name</th>
+                    <th>Upload Time</th>
+                    <th>Uploaded By</th>
+                    <th>CSV File ID</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for upload in uploads %}
+                <tr class="clickable-row" data-csv-file-id="{{ upload.csv_file_id }}">
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <strong>{{ upload.csv_file_name }}</strong>
+                    </td>
+                    <td>{{ upload.upload_time }}</td>
+                    <td>{{ upload.uploaded_by }}</td>
+                    <td>
+                        <code class="file-id">{{ upload.csv_file_id }}</code>
+                    </td>
+                    <td>
+                        <button class="btn-details" onclick="viewProviders('{{ upload.csv_file_id }}')">
+                            View Providers
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Make entire row clickable
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function(e) {
+        // Don't trigger if clicking the button
+        if (!e.target.classList.contains('btn-details')) {
+            const csvFileId = this.getAttribute('data-csv-file-id');
+            viewProviders(csvFileId);
+        }
+    });
+});
+
+function viewProviders(csvFileId) {
+    // Navigate to dashboard with csv_file_id parameter
+    window.location.href = `/dashboard?csv_file_id=${encodeURIComponent(csvFileId)}`;
+}
+</script>
+
+<style>
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-row:hover {
+    background-color: #f8f9fa;
+}
+
+.file-id {
+    background-color: #f4f4f4;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #333;
+}
+
+.btn-details {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.btn-details:hover {
+    background-color: #0052a3;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block title %}Verification Results{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1>Provider Verification Results</h1>
+            <p class="dashboard-subtitle">
+                {% if current_file_id == 'all' %}
+                    All Files • {{ summary.total }} providers total
+                {% else %}
+                    {{ files_loaded }} • {{ summary.total }} providers
+                {% endif %}
+            </p>
+        </div>
+        <button class="export-btn" onclick="exportResults()">
+            📥 Export CSV
+        </button>
+    </div>
+    
+    <!-- Summary Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon">📊</div>
+            <div class="metric-content">
+                <div class="metric-value">{{ summary.total }}</div>
+                <div class="metric-label">Total Providers</div>
+            </div>
+        </div>
+        <div class="metric-card success">
+            <div class="metric-icon">✓</div>
+            <div class="metric-content">
+                <div class="metric-value">{{ summary.verified }}</div>
+                <div class="metric-label">Verified</div>
+                <div class="metric-percentage">
+                    {{ ((summary.verified / summary.total * 100) | round(1)) if summary.total > 0 else 0 }}%
+                </div>
+            </div>
+        </div>
+        <div class="metric-card warning">
+            <div class="metric-icon">⚠</div>
+            <div class="metric-content">
+                <div class="metric-value">{{ summary.review }}</div>
+                <div class="metric-label">Needs Review</div>
+                <div class="metric-percentage">
+                    {{ ((summary.review / summary.total * 100) | round(1)) if summary.total > 0 else 0 }}%
+                </div>
+            </div>
+        </div>
+        <div class="metric-card danger">
+            <div class="metric-icon">✗</div>
+            <div class="metric-content">
+                <div class="metric-value">{{ summary.failed }}</div>
+                <div class="metric-label">Failed</div>
+                <div class="metric-percentage">
+                    {{ ((summary.failed / summary.total * 100) | round(1)) if summary.total > 0 else 0 }}%
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters & Search -->
+    <div class="filters-bar">
+        <input type="text" id="searchInput" class="search-input" 
+               placeholder="🔍 Search by provider name or NPI..."
+               autocomplete="off">
+        
+        <select id="fileFilter" class="filter-select">
+            <option value="all">All Files</option>
+            {% for file in uploaded_files %}
+            <option value="{{ file.id }}" {% if file.id == current_file_id %}selected{% endif %}>
+                {{ file.filename }}
+            </option>
+            {% endfor %}
+        </select>
+        
+        <select id="statusFilter" class="filter-select">
+            <option value="all">All Statuses</option>
+            <option value="verified">✓ Verified</option>
+            <option value="needs_review">⚠ Needs Review</option>
+            <option value="failed">✗ Failed</option>
+        </select>
+        
+        <select id="confidenceFilter" class="filter-select">
+            <option value="all">All Confidence Levels</option>
+            <option value="high">High (>80%)</option>
+            <option value="medium">Medium (50-80%)</option>
+            <option value="low">Low (<50%)</option>
+        </select>
+        
+        <select id="cityFilter" class="filter-select">
+            <option value="all">All Cities</option>
+            {% for city in cities %}
+            <option value="{{ city }}">{{ city }}</option>
+            {% endfor %}
+        </select>
+        
+        <input type="text" id="zipcodeFilter" class="filter-input" 
+               placeholder="ZIP Code"
+               autocomplete="off">
+        
+        <button class="filter-reset-btn" onclick="resetFilters()">
+            Reset Filters
+        </button>
+    </div>
+    
+    <!-- Results Count -->
+    <div class="results-count">
+        Showing <span id="visibleCount">{{ results|length }}</span> of {{ results|length }} providers
+    </div>
+    
+    <!-- Results Table -->
+    <div class="results-table-container">
+        <table class="results-table" id="resultsTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Status ▾</th>
+                    <th onclick="sortTable(1)">Provider Name ▾</th>
+                    <th onclick="sortTable(2)">Phone ▾</th>
+                    <th onclick="sortTable(3)">Address ▾</th>
+                    <th onclick="sortTable(4)">City, State ZIP ▾</th>
+                    <th onclick="sortTable(5)">Facility ▾</th>
+                    <th onclick="sortTable(6)">Confidence ▾</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for result in results %}
+                <tr class="result-row status-{{ result.status }}" 
+                    data-confidence="{{ result.confidence_score }}"
+                    data-status="{{ result.status }}"
+                    data-file-id="{{ result.file_id }}"
+                    data-city="{{ result.city }}"
+                    data-zipcode="{{ result.zip_code }}">
+                    <td>
+                        {% if result.status == 'verified' %}
+                            <span class="status-badge success">✓ Verified</span>
+                        {% elif result.status == 'needs_review' %}
+                            <span class="status-badge warning">⚠ Review</span>
+                        {% else %}
+                            <span class="status-badge danger">✗ Failed</span>
+                        {% endif %}
+                    </td>
+                    <td class="provider-name">{{ result.provider_name }}</td>
+                    <td class="phone-cell">
+                        {% if result.phone %}
+                        <a href="tel:{{ result.phone }}" class="phone-link">{{ result.phone }}</a>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td class="address-cell">
+                        {% if result.address_changed %}
+                            <div class="address-changed">
+                                <div class="address-original" title="Original address">
+                                    <span class="address-label">Original:</span>
+                                    {{ result.original_address }}
+                                </div>
+                                <div class="address-verified" title="Verified address">
+                                    <span class="address-label">Verified:</span>
+                                    {{ result.verified_address }}
+                                </div>
+                            </div>
+                        {% else %}
+                            {{ result.verified_address or result.original_address }}
+                        {% endif %}
+                    </td>
+                    <td class="location-cell">{{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}</td>
+                    <td class="facility-cell" title="{{ result.specialty }}">
+                        <span class="facility-text">{{ result.specialty or 'N/A' }}</span>
+                    </td>
+                    <td>
+                        <div class="confidence-container">
+                            <div class="confidence-bar">
+                                <div class="confidence-fill confidence-{{ 'high' if result.confidence_score > 80 else 'medium' if result.confidence_score >= 50 else 'low' }}" 
+                                     style="width: {{ result.confidence_score }}%"></div>
+                            </div>
+                            <span class="confidence-text">{{ result.confidence_score }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn-details" onclick="showProviderDetails(this)" 
+                                data-provider='{{ result | tojson }}'>
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="pagination">
+        <button id="prevPage" onclick="previousPage()" disabled>« Previous</button>
+        <span id="pageInfo">Page 1 of 1</span>
+        <button id="nextPage" onclick="nextPage()" disabled>Next »</button>
+    </div>
+    
+    <!-- Back to Upload -->
+    <div class="dashboard-actions">
+        <a href="/" class="btn-secondary">
+            ← Upload Another File
+        </a>
+    </div>
+</div>
+
+<!-- Provider Details Modal -->
+<div id="providerDetailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalProviderName">Provider Details</h2>
+            <span class="modal-close" onclick="closeProviderDetails()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h3>Basic Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Provider Name:</span>
+                        <span class="detail-value" id="detailProviderName"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">NPI:</span>
+                        <span class="detail-value" id="detailNPI"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Facility:</span>
+                        <span class="detail-value" id="detailSpecialty"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value" id="detailStatus"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Confidence Score:</span>
+                        <span class="detail-value" id="detailConfidence"></span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Contact Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Phone:</span>
+                        <span class="detail-value" id="detailPhone"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Fax:</span>
+                        <span class="detail-value" id="detailFax"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value" id="detailEmail"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Operating Hours:</span>
+                        <span class="detail-value operating-hours" id="detailOperatingHours"></span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Address Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Address:</span>
+                        <span class="detail-value" id="detailAddress"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">City:</span>
+                        <span class="detail-value" id="detailCity"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">State:</span>
+                        <span class="detail-value" id="detailState"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">ZIP Code:</span>
+                        <span class="detail-value" id="detailZip"></span>
+                    </div>
+                    <div class="detail-row" id="addressChangedSection" style="display: none;">
+                        <span class="detail-label">Address Changed:</span>
+                        <span class="detail-value address-change-badge">Yes</span>
+                    </div>
+                </div>
+
+                <div class="detail-section" id="sourcesSection">
+                    <h3>Data Sources</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Sources:</span>
+                        <span class="detail-value" id="detailSources"></span>
+                    </div>
+                </div>
+
+                <div class="detail-section" id="discrepanciesSection" style="display: none;">
+                    <h3>Discrepancies & Notes</h3>
+                    <div class="detail-row">
+                        <ul id="detailDiscrepancies" class="discrepancies-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// Phone number normalization
+function formatPhoneNumber(phone) {
+    if (!phone || phone === 'N/A' || phone === '-') return phone;
+    
+    // Remove all non-numeric characters
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Check if we have 10 or 11 digits (with country code)
+    if (cleaned.length === 10) {
+        // Format as (XXX) XXX-XXXX
+        return `(${cleaned.substring(0, 3)}) ${cleaned.substring(3, 6)}-${cleaned.substring(6, 10)}`;
+    } else if (cleaned.length === 11 && cleaned[0] === '1') {
+        // Remove leading 1 and format
+        return `(${cleaned.substring(1, 4)}) ${cleaned.substring(4, 7)}-${cleaned.substring(7, 11)}`;
+    }
+    
+    // Return original if format doesn't match
+    return phone;
+}
+
+// Name normalization to Title Case
+function formatProviderName(name) {
+    if (!name || name === 'N/A' || name === '-') return name;
+    
+    // Convert to lowercase first
+    const lowerName = name.toLowerCase();
+    
+    // Split by spaces and capitalize first letter of each word
+    const words = lowerName.split(' ').map(word => {
+        if (word.length === 0) return word;
+        
+        // Handle special cases like "Jr.", "Sr.", "III", "II", "MD", "DO", etc.
+        const upperWords = ['md', 'do', 'phd', 'jr', 'sr', 'ii', 'iii', 'iv'];
+        if (upperWords.includes(word.replace(/\./g, ''))) {
+            return word.toUpperCase();
+        }
+        
+        // Handle initials (single letter followed by period)
+        if (word.length <= 2 && word.includes('.')) {
+            return word.toUpperCase();
+        }
+        
+        // Handle hyphenated names (e.g., Mary-Anne)
+        if (word.includes('-')) {
+            return word.split('-').map(part => 
+                part.charAt(0).toUpperCase() + part.slice(1)
+            ).join('-');
+        }
+        
+        // Standard title case
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+    
+    return words.join(' ');
+}
+
+// Export functionality
+function exportResults() {
+    // Get csv_file_id from the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const csvFileId = urlParams.get('csv_file_id');
+    
+    if (csvFileId) {
+        window.location.href = '/export?csv_file_id=' + encodeURIComponent(csvFileId);
+    } else {
+        alert('Unable to export: csv_file_id not found');
+    }
+}
+
+// Reset filters
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('fileFilter').value = 'all';
+    document.getElementById('statusFilter').value = 'all';
+    document.getElementById('confidenceFilter').value = 'all';
+    document.getElementById('cityFilter').value = 'all';
+    document.getElementById('zipcodeFilter').value = '';
+    applyFilters();
+}
+
+// Show provider details modal
+function showProviderDetails(button) {
+    const providerData = JSON.parse(button.getAttribute('data-provider'));
+    
+    // Debug: Log to console
+    console.log('Provider Data:', providerData);
+    console.log('Operating Hours:', providerData.operating_hours);
+    
+    // Populate modal with formatted names
+    const formattedName = formatProviderName(providerData.provider_name);
+    document.getElementById('modalProviderName').textContent = formattedName;
+    document.getElementById('detailProviderName').textContent = formattedName || 'N/A';
+    document.getElementById('detailNPI').textContent = providerData.npi || 'N/A';
+    
+    // Facility name (stored in specialty field from data_formatter.py line 83)
+    const facilityName = providerData.specialty || '';
+    document.getElementById('detailSpecialty').textContent = formatProviderName(facilityName) || 'N/A';
+    
+    // Status badge
+    const statusMap = {
+        'verified': '✓ Verified',
+        'needs_review': '⚠ Needs Review',
+        'failed': '✗ Failed'
+    };
+    const statusBadge = `<span class="status-badge ${providerData.status}">${statusMap[providerData.status] || providerData.status}</span>`;
+    document.getElementById('detailStatus').innerHTML = statusBadge;
+    
+    document.getElementById('detailConfidence').textContent = (providerData.confidence_score || 0) + '%';
+    
+    // Make phone clickable with formatted number
+    const phoneElement = document.getElementById('detailPhone');
+    if (providerData.phone && providerData.phone !== 'N/A') {
+        const formattedPhone = formatPhoneNumber(providerData.phone);
+        phoneElement.innerHTML = `<a href="tel:${providerData.phone}" class="phone-link">${formattedPhone}</a>`;
+    } else {
+        phoneElement.textContent = 'N/A';
+    }
+    
+    document.getElementById('detailFax').textContent = providerData.fax || 'N/A';
+    document.getElementById('detailEmail').textContent = providerData.email || 'N/A';
+    
+    // Operating hours - format each day on separate line
+    let operatingHours = providerData.operating_hours || 'N/A';
+    if (operatingHours !== 'N/A' && operatingHours) {
+        // Replace commas followed by space with newline for each day
+        operatingHours = operatingHours.split(', ').join('\n');
+    }
+    document.getElementById('detailOperatingHours').textContent = operatingHours;
+    
+    document.getElementById('detailAddress').textContent = providerData.verified_address || providerData.original_address || providerData.address || 'N/A';
+    document.getElementById('detailCity').textContent = providerData.city || 'N/A';
+    document.getElementById('detailState').textContent = providerData.state || 'N/A';
+    document.getElementById('detailZip').textContent = providerData.zip_code || 'N/A';
+    
+    // Address changed
+    if (providerData.address_changed) {
+        document.getElementById('addressChangedSection').style.display = 'flex';
+    } else {
+        document.getElementById('addressChangedSection').style.display = 'none';
+    }
+    
+    // Sources
+    if (providerData.sources && providerData.sources.length > 0) {
+        document.getElementById('detailSources').textContent = providerData.sources.join(', ');
+        document.getElementById('sourcesSection').style.display = 'block';
+    } else {
+        document.getElementById('sourcesSection').style.display = 'none';
+    }
+    
+    // Discrepancies
+    if (providerData.discrepancies && providerData.discrepancies.length > 0) {
+        const discrepanciesList = document.getElementById('detailDiscrepancies');
+        discrepanciesList.innerHTML = '';
+        providerData.discrepancies.forEach(disc => {
+            const li = document.createElement('li');
+            li.textContent = disc;
+            discrepanciesList.appendChild(li);
+        });
+        document.getElementById('discrepanciesSection').style.display = 'block';
+    } else {
+        document.getElementById('discrepanciesSection').style.display = 'none';
+    }
+    
+    // Show modal
+    document.getElementById('providerDetailsModal').style.display = 'block';
+}
+
+// Close provider details modal
+function closeProviderDetails() {
+    document.getElementById('providerDetailsModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('providerDetailsModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Format phone numbers in table on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Format phone numbers
+    const phoneLinks = document.querySelectorAll('.phone-link');
+    phoneLinks.forEach(link => {
+        const originalPhone = link.textContent;
+        const formattedPhone = formatPhoneNumber(originalPhone);
+        link.textContent = formattedPhone;
+    });
+    
+    // Format provider names
+    const providerNameCells = document.querySelectorAll('.provider-name');
+    providerNameCells.forEach(cell => {
+        const originalName = cell.textContent;
+        const formattedName = formatProviderName(originalName);
+        cell.textContent = formattedName;
+    });
+});
+</script>
+{% endblock %}

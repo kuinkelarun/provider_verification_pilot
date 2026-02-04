@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Error{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-card">
+        <div class="error-icon">⚠️</div>
+        <h1>Oops! Something went wrong</h1>
+        <p class="error-message">{{ error }}</p>
+        <div class="error-actions">
+            <a href="/" class="btn-primary">← Back to Upload</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-container {
+    max-width: 600px;
+    margin: 80px auto;
+    padding: 0 20px;
+}
+
+.error-card {
+    background: white;
+    border-radius: 12px;
+    padding: 60px 40px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.error-icon {
+    font-size: 64px;
+    margin-bottom: 24px;
+}
+
+.error-card h1 {
+    color: #212529;
+    margin-bottom: 16px;
+}
+
+.error-message {
+    color: #6C757D;
+    font-size: 16px;
+    margin-bottom: 32px;
+}
+
+.error-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.btn-primary {
+    background-color: #0066CC;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #0052A3;
+}
+</style>
+{% endblock %}
