@@ -1,9 +1,11 @@
 # Databricks Apps Configuration
 # This file configures the deployment of the Healthcare Provider Directory app
 
-command: ["flask", "run", "--host=0.0.0.0", "--port=8080"]
+command: ["python", "wsgi.py"]
 
 env:
+  - name: PYTHONPATH
+    value: "/app/python/source_code:/app/python/source_code"
   - name: FLASK_APP
     value: app.py
   - name: FLASK_ENV
