@@ -4,6 +4,14 @@
 
 {% block content %}
 <div class="dashboard-container">
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="loading-modal" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p class="loading-message">Loading...</p>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="dashboard-header">
         <div>
@@ -63,8 +71,38 @@ document.querySelectorAll('.clickable-row').forEach(row => {
     });
 });
 
+// Hide loading modal when page loads or comes from back/forward cache
+function hideLoadingModal() {
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        loadingModal.style.display = 'none';
+    }
+}
+
+// Handle page load
+window.addEventListener('load', hideLoadingModal);
+
+// Handle back/forward navigation (browser cache)
+window.addEventListener('pageshow', function(event) {
+    hideLoadingModal();
+});
+
+// Handle visibility change (when tab becomes visible)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        hideLoadingModal();
+    }
+});
+
 function viewProviders(csvFileId) {
-    // Navigate to dashboard with csv_file_id parameter
+    // Show loading modal
+    const loadingModal = document.getElementById('loadingModal');
+    loadingModal.style.display = 'flex';
+    
+    // Set flag in sessionStorage to indicate loading
+    sessionStorage.setItem('isLoadingProviders', 'true');
+    
+    // Navigate to dashboard
     window.location.href = `/dashboard?csv_file_id=${encodeURIComponent(csvFileId)}`;
 }
 </script>

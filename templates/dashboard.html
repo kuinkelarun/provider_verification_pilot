@@ -4,6 +4,14 @@
 
 {% block content %}
 <div class="dashboard-container">
+    <!-- Loading Modal (for continuation from upload_list) -->
+    <div id="loadingModal" class="loading-modal" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p class="loading-message">Loading...</p>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="dashboard-header">
         <div>
@@ -488,6 +496,22 @@ window.onclick = function(event) {
 
 // Format phone numbers in table on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if we came from the loading page
+    const isLoading = sessionStorage.getItem('isLoadingProviders') === 'true';
+    
+    if (isLoading) {
+        const loadingModal = document.getElementById('loadingModal');
+        
+        // Show the loading modal briefly
+        loadingModal.style.display = 'flex';
+        
+        // Hide modal after a short delay
+        setTimeout(() => {
+            loadingModal.style.display = 'none';
+            sessionStorage.removeItem('isLoadingProviders');
+        }, 500);
+    }
+    
     // Format phone numbers
     const phoneLinks = document.querySelectorAll('.phone-link');
     phoneLinks.forEach(link => {
