@@ -1,103 +1,339 @@
-# Flask Provider Verification Dashboard
+# Healthcare Provider Verification Dashboard
 
-A modern, intuitive web dashboard for healthcare provider data verification, designed to run on Databricks.
+A modern Flask web application for browsing and verifying healthcare provider data stored in Databricks. The dashboard provides an intuitive interface to view provider verification results with filtering, searching, and export capabilities.
+
+---
 
 ## 🎯 Features
 
-- **File Upload**: Drag-and-drop CSV/Excel file upload with preview
-- **Real-time Verification**: Integration with Databricks backend for AI-powered verification
-- **Interactive Dashboard**: Filter, search, and sort through thousands of provider records
-- **Confidence Scoring**: Visual indicators for verification confidence levels
-- **Export Functionality**: Download results as CSV
-- **Modern UI**: Clean, professional design optimized for healthcare operations
+- **Batch Management**: View all uploaded provider verification batches
+- **Dynamic Data Discovery**: Automatically finds provider data across Databricks tables
+- **Provider Details**: View comprehensive provider information with operating hours
+- **Confidence Scoring**: Visual indicators for verification confidence
+- **Export**: Download results as CSV
+- **Mobile Responsive**: Works seamlessly on all devices
+- **Loading Indicator**: Smooth spinner animation during data loading
+
+---
 
 ## 📁 Project Structure
 
 ```
-flask-provider-dashboard/
-├── app.py                          # Main Flask application
+Healthcare-Provider-Directory/
+├── app.py                          # Main Flask application & route handlers
 ├── requirements.txt                # Python dependencies
-├── .env.example                    # Environment configuration template
+├── .env.example                    # Environment variables template
 ├── README.md                       # This file
 │
+├── utils/
+│   ├── __init__.py
+│   ├── databricks_connector.py     # Databricks connection & table queries
+│   ├── data_formatter.py           # JSON parsing & data formatting
+│   ├── file_handler.py             # File upload validation (legacy)
+│   └── backend_connector.py        # Backend integration (legacy)
+│
 ├── templates/
-│   ├── base.html                   # Base template
-│   ├── upload.html                 # File upload screen
-│   ├── dashboard.html              # Results dashboard
-│   └── error.html                  # Error page
+│   ├── base.html                   # Base HTML template with header
+│   ├── upload_list.html            # Landing page - batch selection
+│   ├── dashboard.html              # Results dashboard - provider details
+│   └── error.html                  # Error display page
 │
-├── static/
-│   ├── css/
-│   │   └── style.css              # Complete styling
-│   └── js/
-│       └── dashboard.js           # Dashboard interactivity
-│
-└── utils/
-    ├── __init__.py
-    ├── file_handler.py            # File upload handling
-    ├── backend_connector.py       # Databricks backend integration
-    └── data_formatter.py          # Data formatting utilities
+└── static/
+    ├── css/
+    │   └── style.css              # Complete responsive styling
+    └── js/
+        └── dashboard.js           # Client-side interactions
 ```
 
-## 🚀 Quick Start
+---
 
-### Phase 1: Local Development with Mock Data
+## 📦 Module Dependencies
 
-1. **Install Dependencies**
+**Python Packages** (see `requirements.txt`):
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| Flask | 3.0.0 | Web framework for routing & templating |
+| Werkzeug | 3.0.1 | WSGI utilities & HTTP handling |
+| pandas | 2.1.4 | Data manipulation & CSV processing |
+| python-dotenv | 1.0.0 | Load environment variables from `.env` |
+| databricks-sql-connector | ≥3.0.0 | Connect to Databricks SQL Warehouse |
+
+---
+
+## 🔧 Python Files Overview
+
+### **app.py** (357 lines)
+Main Flask application with route handlers:
+- **`index()`** - Loads and displays `csv_upload_details` table (batch listing page)
+- **`dashboard()`** - Dynamically finds table containing `csv_file_id`, loads provider data, formats results
+- **`export()`** - Generates CSV export of filtered results
+- **`health()`** - Health check endpoint for monitoring
+
+**Key Logic**: 
+- On dashboard load, searches all tables in Databricks schema for ones containing the requested `csv_file_id`
+- Loads matching data and passes to formatter for display
+
+---
+
+### **utils/databricks_connector.py**
+Handles all Databricks SQL Warehouse connections:
+- **`__init__()`** - Initializes connection with host, token, HTTP path
+- **`load_table_data(table_name, filters=None)`** - Query table with optional WHERE clause
+- **`list_available_tables()`** - List all accessible tables in schema
+- **`query()`** - Execute arbitrary SQL queries
+
+**Usage in app.py**:
+```python
+databricks.load_table_data('databricks_poc.default.csv_upload_details')
+```
+
+---
+
+### **utils/data_formatter.py**
+Transforms raw Databricks JSON into display-ready format:
+- **`parse_json_data(json_str)`** - Parses nested JSON fields from Databricks records
+- **`format_results_for_display(results)`** - Maps Databricks fields to dashboard fields, extracts operating hours
+- **`extract_operating_hours()`** - Parses operating hours from `operational_status_value_*` fields
+
+**Data Transformation Pipeline**:
+```
+Databricks JSON fields → parse_json_data() → format_results_for_display()
+→ Dashboard-ready format with:
+   - provider_name (Title Case)
+   - npi, phone (formatted), email
+   - address, city, state, zip
+   - specialty, confidence_score
+   - operating_hours (one day per line)
+```
+
+---
+
+### **utils/file_handler.py**
+Validates uploaded files (currently unused - data comes from Databricks):
+- `validate_file()` - Check file type & size
+- `parse_csv()` - Read CSV file into memory
+
+---
+
+### **utils/backend_connector.py**
+Backend integration placeholder (currently unused):
+- For future REST API or Databricks Jobs API integration
+
+---
+
+## 🔄 Data Flow
+
+### **1. Landing Page (Batch Selection)**
+```
+User visits http://localhost:8080/
+    ↓
+app.index() calls databricks.load_table_data('csv_upload_details')
+    ↓
+Databricks returns: [{csv_file_id: '0001', csv_file_name: 'Batch 1', ...}, ...]
+    ↓
+Jinja2 renders upload_list.html with batch list
+    ↓
+User clicks "View Providers" → navigates to /dashboard?csv_file_id=0001
+```
+
+### **2. Dashboard Page (Data Display)**
+```
+Browser navigates to /dashboard?csv_file_id=0001
+    ↓
+app.dashboard() receives csv_file_id parameter
+    ↓
+Search phase:
+  - Call databricks.list_available_tables()
+  - For each table: query with WHERE csv_file_id = '0001'
+  - Return first table with matching records
+    ↓
+Load phase:
+  - databricks.load_table_data(found_table_name) with csv_file_id filter
+  - Returns array of provider records (raw JSON from Databricks)
+    ↓
+Format phase:
+  - Call data_formatter.parse_json_data() on each record
+  - Parse nested JSON fields: address_json, contacts_json, etc.
+  - Call format_results_for_display() to map to display format
+    ↓
+Render phase:
+  - Pass formatted results to dashboard.html template
+  - Jinja2 renders table with 50+ provider fields
+  - JavaScript applies phone number formatting, name casing
+    ↓
+Display:
+  - Upload list with batch info
+  - Summary metrics (total, verified, needs review, etc.)
+  - Filterable provider table with modal details on click
+  - Export CSV button
+```
+
+### **3. Export CSV**
+```
+User clicks "Export CSV" on dashboard
+    ↓
+JavaScript calls /export?csv_file_id=0001
+    ↓
+app.export():
+  - Uses same table discovery as dashboard
+  - Loads data, formats it
+  - Generates temporary CSV file
+    ↓
+Returns CSV file download to browser
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.8+
+- Databricks workspace with SQL Warehouse
+- Access to tables in `databricks_poc.default` schema
+
+### Installation
+
+1. **Clone/download** the project
+
+2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Run the Application**
+3. **Configure environment** (copy template)
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Edit `.env`** with Databricks credentials:
+   ```env
+   DATABRICKS_HOST=your-workspace.databricks.com
+   DATABRICKS_TOKEN=dapi...
+   DATABRICKS_HTTP_PATH=/sql/1.0/endpoints/your-endpoint-id
+   DATABRICKS_CATALOGS=databricks_poc
+   DATABRICKS_SCHEMAS=default
+   ENABLE_DATABRICKS=true
+   ```
+
+5. **Run the application**
    ```bash
    python app.py
    ```
 
-3. **Access the Dashboard**
-   - Open browser to: `http://localhost:8080`
-   - Upload a CSV/Excel file with provider data
-   - View mock verification results
+6. **Open browser** to `http://localhost:8080`
 
-### Phase 2: Backend Integration
+---
 
-1. **Configure Environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Databricks credentials
+## 📊 Expected Data Schema
+
+### **csv_upload_details Table**
+Stores metadata about uploaded batches:
+```
+csv_file_id (string)      - Unique identifier for this batch
+csv_file_name (string)    - Display name
+upload_time (timestamp)   - When batch was uploaded
+uploaded_by (string)      - User who uploaded
+```
+
+### **Provider Data Tables** (e.g., batch_process_output)
+Stores provider records with csv_file_id:
+```
+csv_file_id (string)      - Links to upload_details
+provider_name (string)
+npi (string)
+phone (string)
+email (string)
+address (string)
+city (string)
+state (string)
+zip (string)
+specialty (string)
+confidence_score (float)
+status (string)           - Verified, Needs Review, Failed
+operational_status_value_1 to _5 (string) - Operating hours JSON
+address_json (string)     - Nested address fields
+contacts_json (string)    - Nested contact fields
+```
+
+---
+
+## 🔍 How Data is Parsed
+
+1. **Raw Databricks Records**: Contain nested JSON in string fields
+   ```json
+   {
+     "provider_name": "Dr. Smith",
+     "address_json": "{\"street\": \"123 Main St\", \"building\": \"Suite 100\"}"
+   }
    ```
 
-2. **Update app.py**
+2. **Parse Phase** (`parse_json_data`): Deserializes JSON strings
    ```python
-   # In app.py, change:
-   MOCK_DATA_MODE = False
+   address_json → parsed dict → extracted fields
    ```
 
-3. **Implement Backend Connection**
-   - Edit `utils/backend_connector.py`
-   - Choose your integration method:
-     - Databricks Jobs API
-     - REST API endpoint
-     - Delta table query
-   - See comments in file for examples
+3. **Format Phase** (`format_results_for_display`): Maps to dashboard schema
+   ```python
+   {
+     "provider_name": "Dr. Smith",
+     "address": "123 Main St, Suite 100",
+     "operating_hours": "Monday: 7:00am – 6:00pm\nTuesday: 7:00am – 6:00pm\n..."
+   }
+   ```
 
-## 📋 Required File Format
+4. **Display Phase**: Rendered in HTML template with JavaScript formatting
+   ```html
+   <td>{{ result.provider_name }}</td>  <!-- "Dr. Smith" -->
+   <td><a href="tel:{{ result.phone }}">{{ result.phone }}</a></td>  <!-- Clickable phone -->
+   ```
 
-Your CSV/Excel file should include these columns:
+---
 
-- **Provider Name** (required) - Full name of healthcare provider
-- **NPI** (required) - National Provider Identifier
-- **Address** - Street address
-- **City** - City name
-- **State** - State abbreviation
-- **ZIP Code** - 5-digit ZIP code
-- **Specialty** - Medical specialty
-- **Phone** - Contact phone number
+## 📝 Configuration
 
-### Sample Data
+Create `.env` file (see `.env.example`):
 
-Download the template from the upload page or create a file like this:
+```env
+# Flask
+FLASK_ENV=production
+FLASK_DEBUG=false
+FLASK_SECRET_KEY=your-secret-key
 
-```csv
+# Databricks
+ENABLE_DATABRICKS=true
+DATABRICKS_HOST=your-workspace.databricks.com
+DATABRICKS_TOKEN=dapi...
+DATABRICKS_HTTP_PATH=/sql/1.0/endpoints/...
+DATABRICKS_CATALOGS=databricks_poc
+DATABRICKS_SCHEMAS=default
+DATABRICKS_TABLE_PATTERN=*
+DATABRICKS_CACHE_DURATION=5
+```
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "Databricks connection not configured" | Check `.env` file exists and `ENABLE_DATABRICKS=true` |
+| "Table not found" | Ensure table exists in `databricks_poc.default` schema |
+| "No data for csv_file_id" | Verify csv_file_id exists in some table with matching WHERE clause |
+| CSV export fails | Check Databricks token has read access to table |
+
+---
+
+## 📄 License
+
+Proprietary - Accenture AI Pilot
+
+---
+
+## 📞 Support
+
+For issues or questions, check the Databricks connection and ensure tables contain expected data structure.
+
 Provider Name,NPI,Address,City,State,ZIP Code,Specialty,Phone
 Dr. John Smith,1234567890,123 Main St,Boston,MA,02101,Cardiology,617-555-0100
 Dr. Jane Doe,9876543210,456 Oak Ave,Cambridge,MA,02139,Pediatrics,617-555-0200
@@ -298,5 +534,6 @@ Internal use - Healthcare Provider Directory Project
 ---
 
 **Built with ❤️ for Data Stewardship Teams**
-#   p r o v i d e r _ v e r i f i c a t i o n _ p i l o t  
+#   p r o v i d e r _ v e r i f i c a t i o n _ p i l o t 
+ 
  

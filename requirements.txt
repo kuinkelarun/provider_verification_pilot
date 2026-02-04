@@ -1,23 +1,15 @@
 # Provider Verification Dashboard - Python Dependencies
-# For Databricks-hosted Flask application
+# For Databricks-hosted Flask application with healthcare provider data
 
-# Core Flask
+# Core Web Framework
 Flask==3.0.0
 Werkzeug==3.0.1
 
-# Data Processing
+# Data Processing & Parsing
 pandas==2.1.4
-openpyxl==3.1.2  # For Excel file support
-xlrd==2.0.1      # For legacy .xls files
 
 # Environment Variables
 python-dotenv==1.0.0
 
 # Databricks Integration
 databricks-sql-connector>=3.0.0
-
-# Optional: API Integration (uncomment if using REST APIs)
-# requests==2.31.0
-
-# Development & Testing
-python-dotenv==1.0.0  # For environment variable management
