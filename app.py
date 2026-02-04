@@ -3,9 +3,13 @@ Flask Provider Verification Dashboard
 Main application file for Databricks-hosted provider data verification UI
 """
 
+# Ensure the current directory is in the Python path (fix for Databricks Apps)
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
-import os
 import json
 import tempfile
 from datetime import datetime
