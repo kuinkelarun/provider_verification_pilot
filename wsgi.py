@@ -42,4 +42,13 @@ except ImportError as e:
     raise
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    import sys
+    
+    # Check for port argument
+    port = 8081
+    if "--port" in sys.argv:
+        port_idx = sys.argv.index("--port")
+        if port_idx + 1 < len(sys.argv):
+            port = int(sys.argv[port_idx + 1])
+    
+    app.run(host="0.0.0.0", port=port, debug=False)
