@@ -248,10 +248,6 @@
                         <span class="detail-value" id="detailFax"></span>
                     </div>
                     <div class="detail-row">
-                        <span class="detail-label">Email:</span>
-                        <span class="detail-value" id="detailEmail"></span>
-                    </div>
-                    <div class="detail-row">
                         <span class="detail-label">Operating Hours:</span>
                         <span class="detail-value operating-hours" id="detailOperatingHours"></span>
                     </div>
@@ -421,7 +417,6 @@ function showProviderDetails(button) {
     }
     
     document.getElementById('detailFax').textContent = providerData.fax || 'N/A';
-    document.getElementById('detailEmail').textContent = providerData.email || 'N/A';
     
     // Operating hours - format each day on separate line
     let operatingHours = providerData.operating_hours || 'N/A';
