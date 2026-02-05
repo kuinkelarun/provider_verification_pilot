@@ -1,11 +1,9 @@
 # Databricks Apps Configuration
 # This file configures the deployment of the Healthcare Provider Directory app
 
-command: ["python", "wsgi.py"]
+command: ["flask", "run", "--host=0.0.0.0"]
 
 env:
-  - name: PYTHONPATH
-    value: "/app/python/source_code:/app/python/source_code"
   - name: FLASK_APP
     value: app.py
   - name: FLASK_ENV
@@ -25,7 +23,7 @@ env:
   - name: DATABRICKS_CATALOGS
     value: "databricks_poc"
   - name: DATABRICKS_SCHEMAS
-    value: "default"
+    value: "default,new_schema"
   - name: DATABRICKS_TABLE_PATTERN
     value: "batch_process_output,csv_upload_details"
   - name: DATABRICKS_CACHE_DURATION
