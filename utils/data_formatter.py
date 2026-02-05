@@ -38,33 +38,54 @@ def parse_json_data(json_data):
             state = record.get('state', record.get('source_state', ''))
             zip_code = record.get('zipcode', '')
             
+            # Source versions (for address display)
+            source_city = record.get('source_city', city)
+            source_state = record.get('source_state', state)
+            source_zip = record.get('source_zipcode', record.get('source_zip', zip_code))
+            
             # Contact info
             phone = record.get('phone', '')
             fax = record.get('fax', '')
             email = record.get('email', '')
             
-            # Confidence mapping: High/Medium/Low -> percentage
-            confidence_raw = record.get('confidence_measure', 'Medium')
-            if confidence_raw == 'High':
-                confidence_score = 90
-            elif confidence_raw == 'Medium':
-                confidence_score = 70
-            elif confidence_raw == 'Low':
-                confidence_score = 40
+            # Confidence score: Use address_confidence_score if available (numerical), otherwise map from confidence_measure
+            if 'address_confidence_score' in record:
+                try:
+                    confidence_score = float(record.get('address_confidence_score', 0))
+                    # Ensure it's in 0-100 range
+                    if confidence_score > 1 and confidence_score <= 100:
+                        confidence_score = int(confidence_score)
+                    elif confidence_score <= 1:
+                        confidence_score = int(confidence_score * 100)
+                    else:
+                        confidence_score = 0
+                except:
+                    confidence_score = 0
             else:
-                confidence_score = 50
-            
-            # Status mapping: SUCCESS -> verified, others based on confidence
-            status_raw = record.get('status', 'SUCCESS')
-            if status_raw == 'SUCCESS':
-                if confidence_score >= 80:
-                    status = 'verified'
-                elif confidence_score >= 50:
-                    status = 'needs_review'
+                # Fallback to confidence_measure mapping
+                confidence_raw = record.get('confidence_measure', 'Medium')
+                if confidence_raw == 'High':
+                    confidence_score = 90
+                elif confidence_raw == 'Medium':
+                    confidence_score = 70
+                elif confidence_raw == 'Low':
+                    confidence_score = 40
                 else:
-                    status = 'failed'
-            else:
+                    confidence_score = 50
+            
+            # Status logic:
+            # - Verified: phone AND address found, AND confidence >= 80%
+            # - Failed: no address found
+            # - Needs Review: confidence < 80% or other conditions
+            has_address = bool(address and address.strip())
+            has_phone = bool(phone and phone.strip())
+            
+            if not has_address:
                 status = 'failed'
+            elif has_phone and has_address and confidence_score >= 80:
+                status = 'verified'
+            else:
+                status = 'needs_review'
             
             # Sources - extract from various source fields
             sources = []
@@ -114,6 +135,9 @@ def parse_json_data(json_data):
                 'city': city,
                 'state': state,
                 'zip_code': zip_code,
+                'source_city': source_city,
+                'source_state': source_state,
+                'source_zip': source_zip,
                 'specialty': specialty,
                 'phone': phone,
                 'email': email,
@@ -167,7 +191,7 @@ def parse_uploaded_data(df):
         'specialty': ['specialty', 'specialization', 'medical specialty', 'practice'],
         'phone': ['phone', 'phone number', 'telephone', 'tel'],
         'email': ['email', 'e-mail', 'email address'],
-        'confidence_score': ['confidence', 'confidence score', 'confidence_score', 'score', 'confidence %'],
+        'confidence_score': ['confidence', 'confidence score', 'confidence_score', 'score', 'confidence %', 'address_confidence_score', 'address confidence score'],
         'status': ['status', 'verification status', 'verification_status', 'result'],
         'sources': ['sources', 'data sources', 'data_sources', 'source', 'references'],
         'original_address': ['original address', 'original_address', 'old address'],
@@ -241,8 +265,16 @@ def parse_uploaded_data(df):
             except:
                 record['confidence_score'] = 0
             
-            # Parse status (normalize to: verified, needs_review, failed)
+            # Parse status using new logic:
+            # - Verified: phone AND address found, AND confidence >= 80%
+            # - Failed: no address found
+            # - Needs Review: confidence < 80% or other conditions
+            has_address = bool(record.get('address', '').strip())
+            has_phone = bool(record.get('phone', '').strip())
+            score = record['confidence_score']
+            
             status = record.get('status', '').lower()
+            # Check if explicit status is provided
             if status in ['verified', 'pass', 'success', 'approved', 'valid']:
                 record['status'] = 'verified'
             elif status in ['needs_review', 'review', 'pending', 'check', 'warning']:
@@ -250,14 +282,13 @@ def parse_uploaded_data(df):
             elif status in ['failed', 'fail', 'error', 'invalid', 'rejected']:
                 record['status'] = 'failed'
             else:
-                # Infer from confidence score if status missing
-                score = record['confidence_score']
-                if score >= 80:
-                    record['status'] = 'verified'
-                elif score >= 50:
-                    record['status'] = 'needs_review'
-                else:
+                # Apply new status logic if status is missing or ambiguous
+                if not has_address:
                     record['status'] = 'failed'
+                elif has_phone and has_address and score >= 80:
+                    record['status'] = 'verified'
+                else:
+                    record['status'] = 'needs_review'
             
             # Parse sources (comma-separated list)
             sources_str = record.get('sources', '')
@@ -317,9 +348,12 @@ def format_results_for_display(results):
             'npi': result.get('npi', 'N/A'),
             'original_address': result.get('original_address', ''),
             'verified_address': result.get('verified_address', result.get('address', '')),
-            'city': result.get('city', ''),
-            'state': result.get('state', ''),
-            'zip_code': result.get('zip_code', ''),
+            'source_city': result.get('source_city', result.get('city', '')),  # Source city (or fallback to model city)
+            'source_state': result.get('source_state', result.get('state', '')),  # Source state (or fallback to model state)
+            'source_zip': result.get('source_zip', result.get('zip_code', '')),  # Source zip (or fallback to model zip)
+            'city': result.get('city', ''),  # Model response city
+            'state': result.get('state', ''),  # Model response state
+            'zip_code': result.get('zip_code', ''),  # Model response zip
             'specialty': result.get('specialty', ''),
             'phone': result.get('phone', ''),
             'email': result.get('email', ''),

@@ -39,6 +39,7 @@
             </div>
         </div>
         <div class="metric-card success">
+            <span class="info-icon" title="Verified: Phone and address found with confidence score ≥80%">ⓘ</span>
             <div class="metric-icon">✓</div>
             <div class="metric-content">
                 <div class="metric-value">{{ summary.verified }}</div>
@@ -49,6 +50,7 @@
             </div>
         </div>
         <div class="metric-card warning">
+            <span class="info-icon" title="Needs Review: Confidence score <80% or missing phone number">ⓘ</span>
             <div class="metric-icon">⚠</div>
             <div class="metric-content">
                 <div class="metric-value">{{ summary.review }}</div>
@@ -59,6 +61,7 @@
             </div>
         </div>
         <div class="metric-card danger">
+            <span class="info-icon" title="Failed: No address found for provider">ⓘ</span>
             <div class="metric-icon">✗</div>
             <div class="metric-content">
                 <div class="metric-value">{{ summary.failed }}</div>
@@ -125,13 +128,12 @@
         <table class="results-table" id="resultsTable">
             <thead>
                 <tr>
-                    <th onclick="sortTable(0)">Status ▾</th>
+                    <th onclick="sortTable(0)">NPI ▾</th>
                     <th onclick="sortTable(1)">Provider Name ▾</th>
                     <th onclick="sortTable(2)">Phone ▾</th>
                     <th onclick="sortTable(3)">Address ▾</th>
-                    <th onclick="sortTable(4)">City, State ZIP ▾</th>
-                    <th onclick="sortTable(5)">Facility ▾</th>
-                    <th onclick="sortTable(6)">Confidence ▾</th>
+                    <th onclick="sortTable(4)">Facility ▾</th>
+                    <th onclick="sortTable(5)">Confidence ▾</th>
                     <th>Details</th>
                 </tr>
             </thead>
@@ -143,15 +145,7 @@
                     data-file-id="{{ result.file_id }}"
                     data-city="{{ result.city }}"
                     data-zipcode="{{ result.zip_code }}">
-                    <td>
-                        {% if result.status == 'verified' %}
-                            <span class="status-badge success">✓ Verified</span>
-                        {% elif result.status == 'needs_review' %}
-                            <span class="status-badge warning">⚠ Review</span>
-                        {% else %}
-                            <span class="status-badge danger">✗ Failed</span>
-                        {% endif %}
-                    </td>
+                    <td class="npi-cell">{{ result.npi }}</td>
                     <td class="provider-name">{{ result.provider_name }}</td>
                     <td class="phone-cell">
                         {% if result.phone %}
@@ -163,20 +157,21 @@
                     <td class="address-cell">
                         {% if result.address_changed %}
                             <div class="address-changed">
-                                <div class="address-original" title="Original address">
-                                    <span class="address-label">Original:</span>
-                                    {{ result.original_address }}
+                                <div class="address-source">
+                                    <span class="address-label">Source:</span>
+                                    <div class="address-text" title="{{ result.original_address }}{% if result.source_city or result.source_state or result.source_zip %}, {{ result.source_city }}{% if result.source_state %}, {{ result.source_state }}{% endif %} {{ result.source_zip }}{% endif %}" data-address="{{ result.original_address }}{% if result.source_city or result.source_state or result.source_zip %}, {{ result.source_city }}{% if result.source_state %}, {{ result.source_state }}{% endif %} {{ result.source_zip }}{% endif %}">{{ result.original_address }}{% if result.source_city or result.source_state or result.source_zip %}, {{ result.source_city }}{% if result.source_state %}, {{ result.source_state }}{% endif %} {{ result.source_zip }}{% endif %}</div>
                                 </div>
-                                <div class="address-verified" title="Verified address">
-                                    <span class="address-label">Verified:</span>
-                                    {{ result.verified_address }}
+                                <div class="address-model">
+                                    <span class="address-label">Model Response:</span>
+                                    <div class="address-text" title="{{ result.verified_address }}{% if result.city or result.state or result.zip_code %}, {{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}{% endif %}" data-address="{{ result.verified_address }}{% if result.city or result.state or result.zip_code %}, {{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}{% endif %}">{{ result.verified_address }}{% if result.city or result.state or result.zip_code %}, {{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}{% endif %}</div>
                                 </div>
                             </div>
                         {% else %}
-                            {{ result.verified_address or result.original_address }}
+                            <div class="address-same">
+                                <div class="address-text" title="{{ result.verified_address or result.original_address }}{% if result.city or result.state or result.zip_code %}, {{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}{% endif %}" data-address="{{ result.verified_address or result.original_address }}{% if result.city or result.state or result.zip_code %}, {{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}{% endif %}">{{ result.verified_address or result.original_address }}{% if result.city or result.state or result.zip_code %}, {{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}{% endif %}</div>
+                            </div>
                         {% endif %}
                     </td>
-                    <td class="location-cell">{{ result.city }}{% if result.state %}, {{ result.state }}{% endif %} {{ result.zip_code }}</td>
                     <td class="facility-cell" title="{{ result.specialty }}">
                         <span class="facility-text">{{ result.specialty or 'N/A' }}</span>
                     </td>
@@ -528,5 +523,105 @@ document.addEventListener('DOMContentLoaded', function() {
         cell.textContent = formattedName;
     });
 });
+
+// Copy address to clipboard
+function copyAddressToClipboard(address) {
+    navigator.clipboard.writeText(address).then(() => {
+        // Create toast notification
+        const toast = document.createElement('div');
+        toast.textContent = '✓ Address copied to clipboard!';
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.backgroundColor = '#4CAF50';
+        toast.style.color = 'white';
+        toast.style.padding = '12px 20px';
+        toast.style.borderRadius = '4px';
+        toast.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        toast.style.zIndex = '10001';
+        toast.style.fontSize = '14px';
+        toast.style.fontFamily = 'inherit';
+        toast.style.transition = 'opacity 0.3s ease';
+        toast.style.opacity = '1';
+        
+        document.body.appendChild(toast);
+        
+        // Fade out and remove after 3 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+        
+        // Close context menu
+        const menu = document.querySelector('.address-context-menu');
+        if (menu) menu.remove();
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+
+// Handle right-click on address text
+document.addEventListener('contextmenu', function(e) {
+    if (!e.target.classList.contains('address-text')) {
+        return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const address = e.target.getAttribute('data-address');
+    if (!address) return;
+    
+    // Remove existing menu
+    const existingMenu = document.querySelector('.address-context-menu');
+    if (existingMenu) existingMenu.remove();
+    
+    // Create context menu
+    const menu = document.createElement('div');
+    menu.className = 'address-context-menu';
+    menu.style.position = 'fixed';
+    menu.style.top = e.clientY + 'px';
+    menu.style.left = e.clientX + 'px';
+    menu.style.zIndex = '10000';
+    menu.style.backgroundColor = 'white';
+    menu.style.border = '1px solid #ccc';
+    menu.style.borderRadius = '4px';
+    menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+    menu.style.padding = '0';
+    menu.style.minWidth = '150px';
+    
+    const btn = document.createElement('button');
+    btn.textContent = 'Copy Address';
+    btn.style.width = '100%';
+    btn.style.padding = '8px 12px';
+    btn.style.border = 'none';
+    btn.style.backgroundColor = 'transparent';
+    btn.style.cursor = 'pointer';
+    btn.style.textAlign = 'left';
+    btn.style.fontSize = '14px';
+    btn.style.color = '#333';
+    btn.style.fontFamily = 'inherit';
+    
+    btn.onmouseover = () => btn.style.backgroundColor = '#f0f0f0';
+    btn.onmouseout = () => btn.style.backgroundColor = 'transparent';
+    btn.onclick = (event) => {
+        event.stopPropagation();
+        copyAddressToClipboard(address);
+    };
+    
+    menu.appendChild(btn);
+    document.body.appendChild(menu);
+    
+    // Close menu on any click
+    setTimeout(() => {
+        const closeMenu = (event) => {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+            document.removeEventListener('contextmenu', closeMenu);
+        };
+        document.addEventListener('click', closeMenu);
+        document.addEventListener('contextmenu', closeMenu);
+    }, 0);
+}, true);
 </script>
 {% endblock %}

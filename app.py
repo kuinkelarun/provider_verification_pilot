@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, after_this_request
 import pandas as pd
 import json
 import tempfile
@@ -50,7 +50,7 @@ if databricks_enabled:
 
 @app.route('/')
 def index():
-    """Render upload list from csv_upload_details table (new landing page)."""
+    """Render upload list from csv_upload_details table (landing page)."""
     # Load csv_upload_details from Databricks
     if not databricks:
         return render_template('error.html', 
@@ -231,6 +231,16 @@ def export_results():
         # Export to CSV
         df.to_csv(output_path, index=False)
         
+        # Cleanup: Delete temporary file after sending
+        @after_this_request
+        def remove_file(response):
+            try:
+                os.remove(output_path)
+                print(f"Cleaned up temporary file: {output_path}")
+            except Exception as e:
+                print(f"Error removing temporary file {output_path}: {str(e)}")
+            return response
+        
         return send_file(output_path, 
                         as_attachment=True, 
                         download_name=filename)
@@ -239,77 +249,82 @@ def export_results():
         return jsonify({'error': f'Export failed: {str(e)}'}), 500
 
 
-@app.route('/load-databricks-table', methods=['POST'])
-def load_databricks_table():
-    """Load data from a Databricks table and save to local storage."""
-    if not databricks:
-        return jsonify({'success': False, 'error': 'Databricks not configured'}), 400
-    
-    try:
-        data = request.get_json()
-        table_name = data.get('table_name')
-        
-        if not table_name:
-            return jsonify({'success': False, 'error': 'table_name required'}), 400
-        
-        # Load data from Databricks
-        print(f"Loading table: {table_name}")
-        table_data = databricks.load_table_data(table_name, limit=100000)  # Limit to 100k rows
-        
-        # Format data for dashboard
-        # Use parse_json_data since Databricks table has JSON structure with source_npi, confidence_measure, etc.
-        formatted_data, validation_errors = parse_json_data(table_data)
-        
-        if validation_errors:
-            return jsonify({
-                'success': False,
-                'error': 'Data validation failed',
-                'details': validation_errors
-            }), 400
-        
-        # Generate unique file ID
-        file_id = f"databricks_{table_name.replace('.', '_')}_{int(datetime.now().timestamp())}"
-        upload_timestamp = datetime.now().isoformat()
-        
-        # Store file metadata
-        file_metadata = {
-            'file_id': file_id,
-            'filename': f"Databricks: {table_name}",
-            'source': 'databricks',
-            'table_name': table_name,
-            'uploaded_at': upload_timestamp,
-            'total_rows': len(formatted_data)
-        }
-        
-        # Save data to persistent storage
-        data_file = os.path.join(app.config['DATA_STORAGE'], f'{file_id}.json')
-        with open(data_file, 'w') as f:
-            json.dump({
-                'metadata': file_metadata,
-                'data': formatted_data
-            }, f)
-        
-        # Update file history
-        history_file = os.path.join(app.config['DATA_STORAGE'], 'upload_history.json')
-        history = []
-        if os.path.exists(history_file):
-            with open(history_file, 'r') as f:
-                history = json.load(f)
-        
-        history.append(file_metadata)
-        
-        with open(history_file, 'w') as f:
-            json.dump(history, f)
-        
-        return jsonify({
-            'success': True,
-            'file_id': file_id,
-            'total_rows': len(formatted_data)
-        })
-        
-    except Exception as e:
-        print(f"Error loading Databricks table: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# REMOVED: load_databricks_table endpoint
+# This endpoint was used to download Databricks data to local storage (data_storage folder)
+# No longer needed since we query Databricks directly on each dashboard load
+# If you need to restore it, uncomment below:
+
+# @app.route('/load-databricks-table', methods=['POST'])
+# def load_databricks_table():
+#     """Load data from a Databricks table and save to local storage."""
+#     if not databricks:
+#         return jsonify({'success': False, 'error': 'Databricks not configured'}), 400
+#     
+#     try:
+#         data = request.get_json()
+#         table_name = data.get('table_name')
+#         
+#         if not table_name:
+#             return jsonify({'success': False, 'error': 'table_name required'}), 400
+#         
+#         # Load data from Databricks
+#         print(f"Loading table: {table_name}")
+#         table_data = databricks.load_table_data(table_name, limit=100000)  # Limit to 100k rows
+#         
+#         # Format data for dashboard
+#         # Use parse_json_data since Databricks table has JSON structure with source_npi, confidence_measure, etc.
+#         formatted_data, validation_errors = parse_json_data(table_data)
+#         
+#         if validation_errors:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'Data validation failed',
+#                 'details': validation_errors
+#             }), 400
+#         
+#         # Generate unique file ID
+#         file_id = f"databricks_{table_name.replace('.', '_')}_{int(datetime.now().timestamp())}"
+#         upload_timestamp = datetime.now().isoformat()
+#         
+#         # Store file metadata
+#         file_metadata = {
+#             'file_id': file_id,
+#             'filename': f"Databricks: {table_name}",
+#             'source': 'databricks',
+#             'table_name': table_name,
+#             'uploaded_at': upload_timestamp,
+#             'total_rows': len(formatted_data)
+#         }
+#         
+#         # Save data to persistent storage
+#         data_file = os.path.join(app.config['DATA_STORAGE'], f'{file_id}.json')
+#         with open(data_file, 'w') as f:
+#             json.dump({
+#                 'metadata': file_metadata,
+#                 'data': formatted_data
+#             }, f)
+#         
+#         # Update file history
+#         history_file = os.path.join(app.config['DATA_STORAGE'], 'upload_history.json')
+#         history = []
+#         if os.path.exists(history_file):
+#             with open(history_file, 'r') as f:
+#                 history = json.load(f)
+#         
+#         history.append(file_metadata)
+#         
+#         with open(history_file, 'w') as f:
+#             json.dump(history, f)
+#         
+#         return jsonify({
+#             'success': True,
+#             'file_id': file_id,
+#             'total_rows': len(formatted_data)
+#         })
+#         
+#     except Exception as e:
+#         print(f"Error loading Databricks table: {str(e)}")
+#         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/download-template')

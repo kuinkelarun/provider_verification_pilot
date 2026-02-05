@@ -741,6 +741,7 @@ body {
     align-items: center;
     gap: var(--spacing-md);
     transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
 }
 
 .metric-card:hover {
@@ -787,6 +788,28 @@ body {
 .metric-label {
     font-size: 14px;
     color: var(--text-secondary);
+}
+
+.info-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.1);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: bold;
+    cursor: help;
+    z-index: 1;
+}
+
+.info-icon:hover {
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 .metric-percentage {
@@ -982,15 +1005,31 @@ body {
     font-size: 13px;
 }
 
-.address-original {
+.address-source {
     color: var(--text-secondary);
-    text-decoration: line-through;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.address-verified {
+.address-model {
     color: var(--success-green);
-    font-weight: 500;
+    margin-top: 8px;
+}
+
+.address-same {
+    color: var(--text-primary);
+}
+
+.address-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    margin-top: 4px;
+    cursor: context-menu;
+    padding: 2px 0;
+    line-height: 1.4;
 }
 
 .address-label {
@@ -998,6 +1037,7 @@ body {
     font-size: 11px;
     text-transform: uppercase;
     margin-right: 4px;
+    display: inline-block;
 }
 
 /* === CONFIDENCE INDICATOR === */
