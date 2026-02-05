@@ -1,0 +1,56 @@
+# Databricks Apps Configuration
+# This file configures the deployment of the Healthcare Provider Directory app
+# 
+# IMPORTANT: Do NOT commit app.yaml to git repository
+# Instead, use this template: Copy this file to app.yaml and fill in your secrets
+# 
+# Setup Instructions:
+# 1. Copy this file to app.yaml: cp app.yaml.example app.yaml
+# 2. Fill in your Databricks credentials in the app.yaml file
+# 3. Never commit app.yaml to version control
+
+command: ["flask", "run", "--host=0.0.0.0"]
+
+env:
+  - name: FLASK_APP
+    value: app.py
+  - name: FLASK_ENV
+    value: production
+  - name: ENABLE_DATABRICKS
+    value: "true"
+  
+  # Databricks connection settings
+  # Get these values from your Databricks workspace:
+  # 1. DATABRICKS_HOST: Settings > Developer Settings > Personal access tokens > Workspace URL
+  # 2. DATABRICKS_TOKEN: Settings > Developer Settings > Personal access tokens > Generate new token
+  # 3. DATABRICKS_HTTP_PATH: Compute > Clusters > SQL Warehouse > Connection details
+  - name: DATABRICKS_HOST
+    value: ""  # e.g., https://dbc-example.cloud.databricks.com
+  - name: DATABRICKS_TOKEN
+    value: ""  # Keep this secret! Use Databricks Secrets in production
+  - name: DATABRICKS_HTTP_PATH
+    value: ""  # e.g., /sql/1.0/warehouses/1234567890abcdef
+  
+  # Catalog and schema configuration
+  - name: DATABRICKS_CATALOGS
+    value: "databricks_poc"
+  - name: DATABRICKS_SCHEMAS
+    value: "default,new_schema"
+  - name: DATABRICKS_TABLE_PATTERN
+    value: "batch_process_output,csv_upload_details"
+  - name: DATABRICKS_CACHE_DURATION
+    value: "5"
+  
+  # Flask secret key (generate a secure key for production)
+  # Generate with: python -c "import os; print(os.urandom(24).hex())"
+  - name: FLASK_SECRET_KEY
+    value: ""  # Set a secure random key
+
+# Resource limits (optional)
+resources:
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+  requests:
+    memory: "1Gi"
+    cpu: "500m"

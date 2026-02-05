@@ -12,7 +12,7 @@ This document provides a comprehensive call graph showing the function call rela
 │                          Flask App (app.py)                      │
 │                                                                   │
 │  Routes: /, /dashboard, /export, /load-databricks-table,        │
-│          /download-template, /health                             │
+│          /health                             │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 │ imports & uses
@@ -95,14 +95,6 @@ load_databricks_table()
   │   └─> data_formatter.parse_json_data()
   ├─> json.dump({...}, f)
   └─> jsonify({...})
-```
-
-#### Route: `/download-template` (Download CSV Template)
-```
-download_template()
-  ├─> pd.DataFrame(template_data)
-  ├─> df.to_csv(output_path, index=False)
-  └─> send_file(output_path, as_attachment=True, ...)
 ```
 
 #### Route: `/health` (Health Check)
@@ -425,11 +417,6 @@ app.py (Main Application)
 │   ├─> databricks.load_table_data()
 │   ├─> parse_json_data()
 │   └─> jsonify()
-│
-├─> Route: /download-template
-│   ├─> pd.DataFrame()
-│   ├─> df.to_csv()
-│   └─> send_file()
 │
 └─> Route: /health
     └─> jsonify()

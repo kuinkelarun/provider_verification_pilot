@@ -327,29 +327,6 @@ def export_results():
 #         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/download-template')
-def download_template():
-    """Download CSV template file."""
-    template_data = {
-        'Provider Name': ['Dr. John Smith', 'Dr. Jane Doe'],
-        'NPI': ['1234567890', '9876543210'],
-        'Address': ['123 Main St', '456 Oak Ave'],
-        'City': ['Boston', 'Cambridge'],
-        'State': ['MA', 'MA'],
-        'ZIP Code': ['02101', '02139'],
-        'Specialty': ['Cardiology', 'Pediatrics'],
-        'Phone': ['617-555-0100', '617-555-0200']
-    }
-    
-    df = pd.DataFrame(template_data)
-    output_path = os.path.join(app.config['UPLOAD_FOLDER'], 'provider_template.csv')
-    df.to_csv(output_path, index=False)
-    
-    return send_file(output_path, 
-                    as_attachment=True, 
-                    download_name='provider_data_template.csv')
-
-
 @app.route('/health')
 def health_check():
     """Health check endpoint for monitoring."""
