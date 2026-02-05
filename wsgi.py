@@ -42,13 +42,8 @@ except ImportError as e:
     raise
 
 if __name__ == "__main__":
-    import sys
-    
-    # Check for port argument
-    port = 8081
-    if "--port" in sys.argv:
-        port_idx = sys.argv.index("--port")
-        if port_idx + 1 < len(sys.argv):
-            port = int(sys.argv[port_idx + 1])
-    
+    # Let Databricks Apps manage the port
+    # Databricks Apps sets the PORT environment variable automatically
+    import os
+    port = int(os.environ.get('PORT', 8080))
     app.run(host="0.0.0.0", port=port, debug=False)

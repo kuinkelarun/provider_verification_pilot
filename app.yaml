@@ -1,7 +1,7 @@
 # Databricks Apps Configuration
 # This file configures the deployment of the Healthcare Provider Directory app
 
-command: ["python", "wsgi.py", "--port=8081"]
+command: ["python", "wsgi.py"]
 
 env:
   - name: PYTHONPATH
