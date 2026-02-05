@@ -228,7 +228,9 @@ Returns CSV file download to browser
 ## 📊 Expected Data Schema
 
 ### **csv_upload_details Table**
+
 Stores metadata about uploaded batches:
+
 ```
 csv_file_id (string)      - Unique identifier for this batch
 csv_file_name (string)    - Display name
@@ -237,7 +239,9 @@ uploaded_by (string)      - User who uploaded
 ```
 
 ### **Provider Data Tables** (e.g., batch_process_output)
+
 Stores provider records with csv_file_id:
+
 ```
 csv_file_id (string)      - Links to upload_details
 provider_name (string)
@@ -250,7 +254,7 @@ state (string)
 zip (string)
 specialty (string)
 confidence_score (float)
-status (string)           - Verified, Needs Review, Failed
+status (string)           - High Confidence, Needs Review, Failed
 operational_status_value_1 to _5 (string) - Operating hours JSON
 address_json (string)     - Nested address fields
 contacts_json (string)    - Nested contact fields
@@ -334,11 +338,6 @@ Proprietary - Accenture AI Pilot
 
 For issues or questions, check the Databricks connection and ensure tables contain expected data structure.
 
-Provider Name,NPI,Address,City,State,ZIP Code,Specialty,Phone
-Dr. John Smith,1234567890,123 Main St,Boston,MA,02101,Cardiology,617-555-0100
-Dr. Jane Doe,9876543210,456 Oak Ave,Cambridge,MA,02139,Pediatrics,617-555-0200
-```
-
 ## 🎨 UI Components
 
 ### Upload Screen
@@ -347,15 +346,17 @@ Dr. Jane Doe,9876543210,456 Oak Ave,Cambridge,MA,02139,Pediatrics,617-555-0200
 - Clear instructions and template download
 
 ### Dashboard
-- **Summary Cards**: Total, Verified, Needs Review, Failed counts
+
+- **Summary Cards**: Total, High Confidence, Needs Review, Failed counts
 - **Filters**: Search by name/NPI, filter by status and confidence
 - **Results Table**: Sortable columns, pagination, visual indicators
 - **Export**: Download filtered results as CSV
 
 ### Status Indicators
-- ✓ **Verified** (Green) - High confidence (>80%)
-- ⚠ **Needs Review** (Yellow) - Medium confidence (50-80%)
-- ✗ **Failed** (Red) - Low confidence (<50%)
+
+- ✓ **High Confidence** (Green) - Confidence ≥80%
+- ⚠ **Needs Review** (Yellow) - Confidence <80%
+- ✗ **Failed** (Red) - No address found
 
 ## 🔧 Configuration Options
 
@@ -532,8 +533,3 @@ Before backend integration, clarify:
 Internal use - Healthcare Provider Directory Project
 
 ---
-
-**Built with ❤️ for Data Stewardship Teams**
-#   p r o v i d e r _ v e r i f i c a t i o n _ p i l o t 
- 
- 
