@@ -39,11 +39,11 @@
             </div>
         </div>
         <div class="metric-card success">
-            <span class="info-icon" title="Verified: Phone and address found with confidence score ≥80%">i</span>
+            <span class="info-icon" title="High Confidence: Phone and address found with confidence score ≥80%">i</span>
             <div class="metric-icon">✓</div>
             <div class="metric-content">
                 <div class="metric-value">{{ summary.verified }}</div>
-                <div class="metric-label">Verified</div>
+                <div class="metric-label">High Confidence</div>
                 <div class="metric-percentage">
                     {{ ((summary.verified / summary.total * 100) | round(1)) if summary.total > 0 else 0 }}%
                 </div>
@@ -90,7 +90,7 @@
         
         <select id="statusFilter" class="filter-select">
             <option value="all">All Statuses</option>
-            <option value="verified">✓ Verified</option>
+            <option value="verified">✓ High Confidence</option>
             <option value="needs_review">⚠ Needs Review</option>
             <option value="failed">✗ Failed</option>
         </select>
@@ -201,13 +201,6 @@
         <button id="prevPage" onclick="previousPage()" disabled>« Previous</button>
         <span id="pageInfo">Page 1 of 1</span>
         <button id="nextPage" onclick="nextPage()" disabled>Next »</button>
-    </div>
-    
-    <!-- Back to Upload -->
-    <div class="dashboard-actions">
-        <a href="/" class="btn-secondary">
-            ← Upload Another File
-        </a>
     </div>
 </div>
 
@@ -409,7 +402,7 @@ function showProviderDetails(button) {
     
     // Status badge
     const statusMap = {
-        'verified': '✓ Verified',
+        'verified': '✓ High Confidence',
         'needs_review': '⚠ Needs Review',
         'failed': '✗ Failed'
     };
